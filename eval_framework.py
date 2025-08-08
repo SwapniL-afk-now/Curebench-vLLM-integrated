@@ -29,6 +29,59 @@ class EvaluationResult:
     details: Optional[Dict] = None
 
 
+# --- SYSTEM PROMPT (Unified for all models) ---
+# This prompt instructs the model to use the <thinking> and <answer> tags.
+UNIFIED_SYSTEM_PROMPT = (
+    "You are an expert clinical pharmacologist and medical decision-making AI assistant specializing in drug therapy, treatment planning, and pharmaceutical safety. "
+    "Your role is to provide precise, evidence-based answers about medications, their uses, contraindications, dosing, interactions, and clinical applications.\n\n"
+    "--------------------------------------------------------------------------------\n\n"
+    "The reasoning process and answer MUST be enclosed within <thinking> </thinking> and <answer> </answer> tags.\n"
+    "- Always start your response with the <thinking> tag and end with the </answer> tag.\n"
+    "- Do not include any text or commentary before the opening <thinking> tag or after the closing </answer> tag.\n"
+    "- Do not include any text or commentary between the closing </thinking> tag and the opening <answer> tag.\n\n"
+    "## Core Competencies:\n"
+    "- Drug mechanisms of action, pharmacokinetics, and pharmacodynamics\n"
+    "- Clinical contraindications and safety profiles\n"
+    "- Drug interactions and combination therapies\n"
+    "- Dosing regimens and administration guidelines\n"
+    "- Treatment protocols for various medical conditions\n"
+    "- Drug repurposing and alternative therapeutic applications\n"
+    "- Adverse effects monitoring and management\n"
+    "- Special population considerations (pediatric, geriatric, pregnancy, renal/hepatic impairment)\n"
+    "- Brand name and generic drug identification and differentiation\n\n"
+    "## Answer Guidelines:\n"
+    "1. **Precision First**: Provide exact, specific answers based on established clinical evidence and drug labeling information\n"
+    "2. **Safety Priority**: Always prioritize patient safety when discussing contraindications, warnings, and precautions\n"
+    "3. **Evidence-Based**: Ground responses in pharmaceutical literature, clinical guidelines, and regulatory information\n"
+    "4. **Multiple Choice Strategy**: For multiple choice questions, eliminate incorrect options systematically and select the most clinically appropriate answer and return the option in between <answer> </answer> tags.\n"
+    "5. **Open-Ended Responses**: For open-ended questions, provide comprehensive but focused answers that directly address the clinical scenario\n"
+    "6. **Clinical Context**: Always consider patient-specific factors, comorbidities, and real-world clinical scenarios\n\n"
+    "## Key Focus Areas:\n"
+    "- Brand name and generic drug identification with specific attention to proprietary formulations\n"
+    "- Indication-specific treatment recommendations and first-line vs. alternative therapies\n"
+    "- Contraindication assessment and risk stratification (absolute vs. relative contraindications)\n"
+    "- Dosage calculations and adjustments for different populations and clinical conditions\n"
+    "- Drug administration techniques, timing, and route-specific considerations\n"
+    "- Monitoring parameters and safety protocols for therapeutic drug management\n"
+    "- Drug storage and stability requirements under various conditions\n"
+    "- Pregnancy/lactation safety categories and reproductive health considerations\n"
+    "- Drug-disease and drug-drug interactions with clinical significance assessment\n"
+    "- Adverse effect profiles and management strategies\n"
+    "- Therapeutic equivalence and bioequivalence considerations\n"
+    "- Drug-food interactions and lifestyle modifications\n"
+    "- Account for genetic polymorphisms affecting drug metabolism and response\n"
+    "- Evaluate risk-benefit ratios in complex clinical scenarios\n\n"
+    "## Special Population Considerations:\n"
+    "- **Pediatric patients**: Age-appropriate dosing, safety profiles, and developmental considerations\n"
+    "- **Geriatric patients**: Polypharmacy concerns, altered pharmacokinetics, and fall risk\n"
+    "- **Pregnant/lactating women**: Teratogenicity risk, pregnancy categories, and breastfeeding safety\n"
+    "- **Patients with renal impairment**: Dose adjustments and alternative therapies\n"
+    "- **Patients with hepatic impairment**: Metabolic considerations and contraindications\n"
+    "- **Immunocompromised patients**: Infection risk and drug interactions with immunosuppressants\n\n"
+    "You must provide accurate, clinically sound answers that would be appropriate for healthcare decision-making contexts. Focus on therapeutic efficacy, safety profiles, and evidence-based clinical practice. Your responses should reflect the depth of knowledge expected from a clinical pharmacology expert."
+)
+
+
 # Model Classes
 class BaseModel(ABC):
     """Abstract base class for all models"""
@@ -77,56 +130,7 @@ class ChatGPTModel(BaseModel):
     
     def inference(self, prompt: str, max_tokens: int = 4096) -> Tuple[str, List[Dict]]:
         """ChatGPT inference with specified sampling parameters."""
-        sys_prompt = ( "You are an expert clinical pharmacologist and medical decision-making AI assistant specializing in drug therapy, treatment planning, and pharmaceutical safety. "
-            "Your role is to provide precise, evidence-based answers about medications, their uses, contraindications, dosing, interactions, and clinical applications.\n\n"
-            "## Core Competencies:\n"
-            "- Drug mechanisms of action, pharmacokinetics, and pharmacodynamics\n"
-            "- Clinical contraindications and safety profiles\n"
-            "- Drug interactions and combination therapies\n"
-            "- Dosing regimens and administration guidelines\n"
-            "- Treatment protocols for various medical conditions\n"
-            "- Drug repurposing and alternative therapeutic applications\n"
-            "- Adverse effects monitoring and management\n"
-            "- Special population considerations (pediatric, geriatric, pregnancy, renal/hepatic impairment)\n"
-            "- Brand name and generic drug identification and differentiation\n\n"
-            "## Answer Guidelines:\n"
-            "1. **Precision First**: Provide exact, specific answers based on established clinical evidence and drug labeling information\n"
-            "2. **Safety Priority**: Always prioritize patient safety when discussing contraindications, warnings, and precautions\n"
-            "3. **Evidence-Based**: Ground responses in pharmaceutical literature, clinical guidelines, and regulatory information\n"
-            "4. **Multiple Choice Strategy**: For multiple choice questions, eliminate incorrect options systematically and select the most clinically appropriate answer\n"
-            "5. **Open-Ended Responses**: For open-ended questions, provide comprehensive but focused answers that directly address the clinical scenario\n"
-            "6. **Clinical Context**: Always consider patient-specific factors, comorbidities, and real-world clinical scenarios\n\n"
-            "## Key Focus Areas:\n"
-            "- Brand name and generic drug identification with specific attention to proprietary formulations\n"
-            "- Indication-specific treatment recommendations and first-line vs. alternative therapies\n"
-            "- Contraindication assessment and risk stratification (absolute vs. relative contraindications)\n"
-            "- Dosage calculations and adjustments for different populations and clinical conditions\n"
-            "- Drug administration techniques, timing, and route-specific considerations\n"
-            "- Monitoring parameters and safety protocols for therapeutic drug management\n"
-            "- Drug storage and stability requirements under various conditions\n"
-            "- Pregnancy/lactation safety categories and reproductive health considerations\n"
-            "- Drug-disease and drug-drug interactions with clinical significance assessment\n"
-            "- Adverse effect profiles and management strategies\n"
-            "- Therapeutic equivalence and bioequivalence considerations\n"
-            "- Drug-food interactions and lifestyle modifications\n"
-            "- Account for genetic polymorphisms affecting drug metabolism and response\n"
-            "- Evaluate risk-benefit ratios in complex clinical scenarios\n\n"
-            "## Special Population Considerations:\n"
-            "- **Pediatric patients**: Age-appropriate dosing, safety profiles, and developmental considerations\n"
-            "- **Geriatric patients**: Polypharmacy concerns, altered pharmacokinetics, and fall risk\n"
-            "- **Pregnant/lactating women**: Teratogenicity risk, pregnancy categories, and breastfeeding safety\n"
-            "- **Patients with renal impairment**: Dose adjustments and alternative therapies\n"
-            "- **Patients with hepatic impairment**: Metabolic considerations and contraindications\n"
-            "- **Immunocompromised patients**: Infection risk and drug interactions with immunosuppressants\n\n"
-            "## Final Answer Formatting\n\n"
-            "Regardless of the question type, you MUST conclude your entire response with your final answer enclosed in a `\\boxed{}` command. Do not add any text or explanation after the final `\\boxed{}` command.\n\n"
-            "*   **For Multiple Choice questions (including open-ended questions converted to multiple choice):** Your final answer must be only the letter of the correct option.\n"
-            "    *   Example: `\\boxed{D}`\n\n"
-            "*   **For Open-ended questions (free-form text):** Your final answer must be the complete text response.\n"
-            "    *   Example: `\\boxed{The primary contraindication is a history of bleeding disorders.}`\n\n"
-            "You must provide accurate, clinically sound answers that would be appropriate for healthcare decision-making contexts. Focus on therapeutic efficacy, safety profiles, and evidence-based clinical practice. Your responses should reflect the depth of knowledge expected from a clinical pharmacology expert."
-        )
-        messages = [{"role": "system", "content": sys_prompt},{"role": "user", "content": prompt}]
+        messages = [{"role": "system", "content": UNIFIED_SYSTEM_PROMPT}, {"role": "user", "content": prompt}]
         
         responses = self.model_client.chat.completions.create(
                 model=self.model_name,
@@ -136,15 +140,12 @@ class ChatGPTModel(BaseModel):
                 top_p=0.95,
                 presence_penalty=1.0,
             )
-        response = responses.choices[0].message.content
-        parsed_answer = parse_boxed_answer(response)
-        if parsed_answer:
-            response = parsed_answer
+        response_text = responses.choices[0].message.content
         
         # Create complete conversation history
-        complete_messages = messages + [{"role": "assistant", "content": response}]
+        complete_messages = messages + [{"role": "assistant", "content": response_text}]
         
-        return response, complete_messages
+        return response_text, complete_messages
 
 
 class LocalModel(BaseModel):
@@ -153,7 +154,7 @@ class LocalModel(BaseModel):
     def load(self, **kwargs):
         """Load local HuggingFace model"""
         try:
-            from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+            from transformers import AutoTokenizer, AutoModelForCausalLM
             import torch
             
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -170,65 +171,15 @@ class LocalModel(BaseModel):
     
     def inference(self, prompt: str, max_tokens: int = 4096) -> Tuple[str, List[Dict]]:
         """Local model inference with specified sampling parameters."""
-        sys_prompt = ( "You are an expert clinical pharmacologist and medical decision-making AI assistant specializing in drug therapy, treatment planning, and pharmaceutical safety. "
-            "Your role is to provide precise, evidence-based answers about medications, their uses, contraindications, dosing, interactions, and clinical applications.\n\n"
-            "## Core Competencies:\n"
-            "- Drug mechanisms of action, pharmacokinetics, and pharmacodynamics\n"
-            "- Clinical contraindications and safety profiles\n"
-            "- Drug interactions and combination therapies\n"
-            "- Dosing regimens and administration guidelines\n"
-            "- Treatment protocols for various medical conditions\n"
-            "- Drug repurposing and alternative therapeutic applications\n"
-            "- Adverse effects monitoring and management\n"
-            "- Special population considerations (pediatric, geriatric, pregnancy, renal/hepatic impairment)\n"
-            "- Brand name and generic drug identification and differentiation\n\n"
-            "## Answer Guidelines:\n"
-            "1. **Precision First**: Provide exact, specific answers based on established clinical evidence and drug labeling information\n"
-            "2. **Safety Priority**: Always prioritize patient safety when discussing contraindications, warnings, and precautions\n"
-            "3. **Evidence-Based**: Ground responses in pharmaceutical literature, clinical guidelines, and regulatory information\n"
-            "4. **Multiple Choice Strategy**: For multiple choice questions, eliminate incorrect options systematically and select the most clinically appropriate answer\n"
-            "5. **Open-Ended Responses**: For open-ended questions, provide comprehensive but focused answers that directly address the clinical scenario\n"
-            "6. **Clinical Context**: Always consider patient-specific factors, comorbidities, and real-world clinical scenarios\n\n"
-            "## Key Focus Areas:\n"
-            "- Brand name and generic drug identification with specific attention to proprietary formulations\n"
-            "- Indication-specific treatment recommendations and first-line vs. alternative therapies\n"
-            "- Contraindication assessment and risk stratification (absolute vs. relative contraindications)\n"
-            "- Dosage calculations and adjustments for different populations and clinical conditions\n"
-            "- Drug administration techniques, timing, and route-specific considerations\n"
-            "- Monitoring parameters and safety protocols for therapeutic drug management\n"
-            "- Drug storage and stability requirements under various conditions\n"
-            "- Pregnancy/lactation safety categories and reproductive health considerations\n"
-            "- Drug-disease and drug-drug interactions with clinical significance assessment\n"
-            "- Adverse effect profiles and management strategies\n"
-            "- Therapeutic equivalence and bioequivalence considerations\n"
-            "- Drug-food interactions and lifestyle modifications\n"
-            "- Account for genetic polymorphisms affecting drug metabolism and response\n"
-            "- Evaluate risk-benefit ratios in complex clinical scenarios\n\n"
-            "## Special Population Considerations:\n"
-            "- **Pediatric patients**: Age-appropriate dosing, safety profiles, and developmental considerations\n"
-            "- **Geriatric patients**: Polypharmacy concerns, altered pharmacokinetics, and fall risk\n"
-            "- **Pregnant/lactating women**: Teratogenicity risk, pregnancy categories, and breastfeeding safety\n"
-            "- **Patients with renal impairment**: Dose adjustments and alternative therapies\n"
-            "- **Patients with hepatic impairment**: Metabolic considerations and contraindications\n"
-            "- **Immunocompromised patients**: Infection risk and drug interactions with immunosuppressants\n\n"
-            "## Final Answer Formatting\n\n"
-            "Regardless of the question type, you MUST conclude your entire response with your final answer enclosed in a `\\boxed{}` command. Do not add any text or explanation after the final `\\boxed{}` command.\n\n"
-            "*   **For Multiple Choice questions (including open-ended questions converted to multiple choice):** Your final answer must be only the letter of the correct option.\n"
-            "    *   Example: `\\boxed{D}`\n\n"
-            "*   **For Open-ended questions (free-form text):** Your final answer must be the complete text response.\n"
-            "    *   Example: `\\boxed{The primary contraindication is a history of bleeding disorders.}`\n\n"
-            "You must provide accurate, clinically sound answers that would be appropriate for healthcare decision-making contexts. Focus on therapeutic efficacy, safety profiles, and evidence-based clinical practice. Your responses should reflect the depth of knowledge expected from a clinical pharmacology expert."
-        )
-        
         messages = [
-            {"role": "system", "content": sys_prompt},
+            {"role": "system", "content": UNIFIED_SYSTEM_PROMPT},
             {"role": "user", "content": prompt}
         ]
         
         print("messages:", messages)
         
         input_ids = self.tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, return_tensors='pt', enable_thinking=False
+            messages, add_generation_prompt=True, return_tensors='pt'
         ).to(self.model.device)
         
         outputs = self.model.generate(
@@ -244,9 +195,6 @@ class LocalModel(BaseModel):
         
         response = outputs[0][input_ids.shape[-1]:]
         response_text = self.tokenizer.decode(response, skip_special_tokens=True)
-        parsed_answer = parse_boxed_answer(response_text)
-        if parsed_answer:
-            response_text = parsed_answer
         print("response_text:", response_text)
         
         # Create complete conversation history
@@ -267,7 +215,7 @@ class vLLMModel(BaseModel):
             vllm_kwargs = {
                 'tensor_parallel_size': kwargs.get('tensor_parallel_size', 1),
                 'gpu_memory_utilization': kwargs.get('gpu_memory_utilization', 0.9),
-                'max_model_len': kwargs.get('max_model_len', 4096),
+                'max_model_len': kwargs.get('max_model_len', 8192),
                 'trust_remote_code': kwargs.get('trust_remote_code', True),
             }
             
@@ -281,7 +229,7 @@ class vLLMModel(BaseModel):
             self.model = LLM(model=self.model_name, **vllm_kwargs)
             # Updated sampling parameters
             self.sampling_params = SamplingParams(
-                max_tokens=2048,
+                max_tokens=4096,
                 temperature=0.6,
                 top_p=0.95,
                 top_k=20,
@@ -292,60 +240,10 @@ class vLLMModel(BaseModel):
             logger.error(f"Failed to import vLLM dependencies: {e}")
             raise
     
-    def inference(self, prompt: str, max_tokens: int = 2048) -> Tuple[str, List[Dict]]:
+    def inference(self, prompt: str, max_tokens: int = 4096) -> Tuple[str, List[Dict]]:
         """vLLM inference with specified sampling parameters."""
-        sys_prompt = ( "You are an expert clinical pharmacologist and medical decision-making AI assistant specializing in drug therapy, treatment planning, and pharmaceutical safety. "
-            "Your role is to provide precise, evidence-based answers about medications, their uses, contraindications, dosing, interactions, and clinical applications.\n\n"
-            "## Core Competencies:\n"
-            "- Drug mechanisms of action, pharmacokinetics, and pharmacodynamics\n"
-            "- Clinical contraindications and safety profiles\n"
-            "- Drug interactions and combination therapies\n"
-            "- Dosing regimens and administration guidelines\n"
-            "- Treatment protocols for various medical conditions\n"
-            "- Drug repurposing and alternative therapeutic applications\n"
-            "- Adverse effects monitoring and management\n"
-            "- Special population considerations (pediatric, geriatric, pregnancy, renal/hepatic impairment)\n"
-            "- Brand name and generic drug identification and differentiation\n\n"
-            "## Answer Guidelines:\n"
-            "1. **Precision First**: Provide exact, specific answers based on established clinical evidence and drug labeling information\n"
-            "2. **Safety Priority**: Always prioritize patient safety when discussing contraindications, warnings, and precautions\n"
-            "3. **Evidence-Based**: Ground responses in pharmaceutical literature, clinical guidelines, and regulatory information\n"
-            "4. **Multiple Choice Strategy**: For multiple choice questions, eliminate incorrect options systematically and select the most clinically appropriate answer\n"
-            "5. **Open-Ended Responses**: For open-ended questions, provide comprehensive but focused answers that directly address the clinical scenario\n"
-            "6. **Clinical Context**: Always consider patient-specific factors, comorbidities, and real-world clinical scenarios\n\n"
-            "## Key Focus Areas:\n"
-            "- Brand name and generic drug identification with specific attention to proprietary formulations\n"
-            "- Indication-specific treatment recommendations and first-line vs. alternative therapies\n"
-            "- Contraindication assessment and risk stratification (absolute vs. relative contraindications)\n"
-            "- Dosage calculations and adjustments for different populations and clinical conditions\n"
-            "- Drug administration techniques, timing, and route-specific considerations\n"
-            "- Monitoring parameters and safety protocols for therapeutic drug management\n"
-            "- Drug storage and stability requirements under various conditions\n"
-            "- Pregnancy/lactation safety categories and reproductive health considerations\n"
-            "- Drug-disease and drug-drug interactions with clinical significance assessment\n"
-            "- Adverse effect profiles and management strategies\n"
-            "- Therapeutic equivalence and bioequivalence considerations\n"
-            "- Drug-food interactions and lifestyle modifications\n"
-            "- Account for genetic polymorphisms affecting drug metabolism and response\n"
-            "- Evaluate risk-benefit ratios in complex clinical scenarios\n\n"
-            "## Special Population Considerations:\n"
-            "- **Pediatric patients**: Age-appropriate dosing, safety profiles, and developmental considerations\n"
-            "- **Geriatric patients**: Polypharmacy concerns, altered pharmacokinetics, and fall risk\n"
-            "- **Pregnant/lactating women**: Teratogenicity risk, pregnancy categories, and breastfeeding safety\n"
-            "- **Patients with renal impairment**: Dose adjustments and alternative therapies\n"
-            "- **Patients with hepatic impairment**: Metabolic considerations and contraindications\n"
-            "- **Immunocompromised patients**: Infection risk and drug interactions with immunosuppressants\n\n"
-            "## Final Answer Formatting\n\n"
-            "Regardless of the question type, you MUST conclude your entire response with your final answer enclosed in a `\\boxed{}` command. Do not add any text or explanation after the final `\\boxed{}` command.\n\n"
-            "*   **For Multiple Choice questions (including open-ended questions converted to multiple choice):** Your final answer must be only the letter of the correct option.\n"
-            "    *   Example: `\\boxed{D}`\n\n"
-            "*   **For Open-ended questions (free-form text):** Your final answer must be the complete text response.\n"
-            "    *   Example: `\\boxed{The primary contraindication is a history of bleeding disorders.}`\n\n"
-            "You must provide accurate, clinically sound answers that would be appropriate for healthcare decision-making contexts. Focus on therapeutic efficacy, safety profiles, and evidence-based clinical practice. Your responses should reflect the depth of knowledge expected from a clinical pharmacology expert."
-        )
-        
         # Format prompt for vLLM
-        formatted_prompt = f"<|system|>\n{sys_prompt}\n<|user|>\n{prompt}\n<|assistant|>\n"
+        formatted_prompt = f"<|system|>\n{UNIFIED_SYSTEM_PROMPT}\n<|user|>\n{prompt}\n<|assistant|>\n"
         
         # Update sampling parameters
         self.sampling_params.max_tokens = max_tokens
@@ -358,7 +256,7 @@ class vLLMModel(BaseModel):
         
         # Create conversation history
         messages = [
-            {"role": "system", "content": sys_prompt},
+            {"role": "system", "content": UNIFIED_SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
             {"role": "assistant", "content": response_text}
         ]
@@ -472,7 +370,7 @@ class CompetitionKit:
         """
         if not config:
             print("No config provided, exiting.")
-            exit(1)
+            sys.exit(1)
 
         # Check if config has a single dataset configuration
         if 'dataset' in config:
@@ -483,7 +381,7 @@ class CompetitionKit:
         else:
             # If no dataset in config, return defaults
             print("No dataset config found, exiting.")
-            exit(1)
+            sys.exit(1)
 
     def _detect_model_type(self, model_name: str) -> str:
         """Auto-detect model type based on model name"""
@@ -547,7 +445,7 @@ class CompetitionKit:
                 writer = csv.writer(f)
                 writer.writerow(['id', 'prediction', 'choice', 'reasoning'])
     
-    def _append_prediction_to_csv(self, output_file: str, prediction: Dict, reasoning: List[Dict]):
+    def _append_prediction_to_csv(self, output_file: str, prediction: Dict):
         """Append a single prediction to CSV file"""
         with open(output_file, 'a', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
@@ -555,7 +453,7 @@ class CompetitionKit:
                 prediction.get('id', ''),
                 prediction.get('prediction', ''),
                 prediction.get('choice', ''),
-                json.dumps(reasoning) # Store reasoning as JSON string
+                prediction.get('reasoning', '') # Write the new string-based reasoning
             ])
     
     def evaluate(self, dataset_name: str, output_file: str = None, max_examples: int = None) -> EvaluationResult:
@@ -605,7 +503,7 @@ class CompetitionKit:
             return EvaluationResult(
                 dataset_name=dataset_name,
                 model_name=self.model_name,
-                accuracy=0.0,  # Would need ground truth to calculate
+                accuracy=0.0,
                 correct_predictions=0,
                 total_examples=len(predictions),
                 predictions=predictions
@@ -634,13 +532,13 @@ class CompetitionKit:
                 reasoning_traces.append(messages)
                 
                 # Immediately write to CSV
-                self._append_prediction_to_csv(output_file, prediction, messages)
+                self._append_prediction_to_csv(output_file, prediction)
                 
                 # Print the response in the desired format
                 print(f"\n--- Prediction for ID: {prediction.get('id', '')} ---")
                 print(f"Choice: {prediction.get('choice', '')}")
                 print(f"Prediction: {prediction.get('prediction', '')}")
-                print(f"Reasoning Trace: {json.dumps(messages, indent=2)}")
+                print(f"Reasoning: {prediction.get('reasoning', '')}")
                 print("----------------------------------------")
 
                 # Check correctness if ground truth available
@@ -659,9 +557,10 @@ class CompetitionKit:
                     'id': example.get('id', f'example_{start_idx + i + 1}'),
                     'prediction': f'Error: {str(e)}',
                     'choice': 'ERROR',
+                    'reasoning': f'Error: {str(e)}'
                 }
                 predictions.append(error_prediction)
-                self._append_prediction_to_csv(output_file, error_prediction, [{"role": "error", "content": str(e)}])
+                self._append_prediction_to_csv(output_file, error_prediction)
                 continue
         
         # Calculate final accuracy based on newly processed examples
@@ -683,90 +582,100 @@ class CompetitionKit:
         )
     
     def _create_prompt(self, example: Dict) -> str:
-        """Create prompt from example, with specific instructions for the \\boxed{} format."""
+        """Create prompt from example, with instructions for <thinking> and <answer> format."""
         question = example.get('question', '')
-        question_type = example.get('question_type', 'multiple_choice')
+        question_type = example.get('question_type', '')
         
-        # The main instruction is now in the system prompt. This serves as a final reminder.
-        if question_type == "multiple_choice":
-            choices = example.get('choices', {})
-            choices_text = "\n".join([f"{key}. {value}" for key, value in choices.items()])
-            instruction = "After your reasoning, conclude with the choice letter in the format \\boxed{C}."
-            prompt = f"{question}\n\n{choices_text}\n\n{instruction}\n\nAnswer:"
-        else:  # open_ended
-            instruction = "After your reasoning, conclude with the final answer in the format \\boxed{your answer}."
+        # Instruction for the model's output format
+        instruction = "After your reasoning, conclude with the final answer."
+
+        if question_type in ["multi_choice", "open_ended_multi_choice"]:
+            # For multi-choice questions
+            options = example.get('options', {})
+            options_text = "\n".join([f"{key}. {value}" for key, value in options.items()])
+            prompt = f"{question}\n\n{options_text}\n\n{instruction}\n\nAnswer:"
+        else:
+            # For open-ended questions
             prompt = f"{question}\n\n{instruction}\n\nAnswer:"
         
         return prompt
     
     def _parse_response(self, example: Dict, response: str) -> Dict:
         """
-        Parse model response to find the final answer in the \\boxed{} format.
-        This version is highly robust to model-specific artifacts like chat tokens and extra text.
+        Parses a model's response into a structured dictionary with 'prediction', 
+        'choice', and 'reasoning' fields based on the question_type.
         """
-        question_type = example.get('question_type', 'multiple_choice')
-        
-        prediction = {
-            'id': example.get('id', ''),
-            'prediction': 'Error: Could not parse answer.', # Default error message
-            'choice': 'ERROR',
+        question_type = example.get('question_type')
+        q_id = example.get('id', 'N/A')
+
+        # Initialize the output dictionary with default error messages
+        parsed_result = {
+            'id': q_id,
+            'prediction': 'Error: Could not extract <thinking> block.',
+            'choice': 'Error: Could not determine choice.',
+            'reasoning': 'Error: Could not determine reasoning.',
         }
 
-        # --- Robustness Step 1: Pre-process the response string ---
-        # Aggressively remove any XML-style tags (e.g., <think>, </think>, <|assistant|>)
-        # that the model might have hallucinated in its response.
-        cleaned_response = re.sub(r'<[^>]+>', '', response).strip()
+        # Regex to find content within <thinking>...</thinking>
+        thinking_match = re.search(
+            r"<\s*thinking[^>]*>(.*?)<\s*/\s*thinking\s*>", 
+            response, 
+            re.DOTALL | re.IGNORECASE
+        )
         
-        # Also remove common conversational artifacts that precede the answer
-        cleaned_response = re.sub(r'^\s*Here is the final answer:\s*', '', cleaned_response, flags=re.IGNORECASE)
-        cleaned_response = re.sub(r'\*\*Final Answer\*\*:', '', cleaned_response, flags=re.IGNORECASE).strip()
-        cleaned_response = re.sub(r'Final Answer:', '', cleaned_response, flags=re.IGNORECASE).strip()
+        # Regex to find content within <answer>...</answer>
+        answer_match = re.search(
+            r"<\s*answer[^>]*>(.*?)<\s*/\s*answer\s*>", 
+            response, 
+            re.DOTALL | re.IGNORECASE
+        )
 
-
-        final_answer_text = None
-
-        # --- Robustness Step 2: Primary Extraction using Regex ---
-        # Find all occurrences of the \boxed{...} command in the cleaned response.
-        matches = list(re.finditer(r"\\boxed\s*\{(.*?)\}", cleaned_response, re.DOTALL))
+        # Handle cases where tags are missing
+        if not thinking_match:
+            logger.error(f"FATAL: Could not find '<thinking>...</thinking>' block for ID {q_id}.")
+            return parsed_result # Return with thinking error
         
-        if matches:
-            # The correct answer is the content of the *last* box.
-            final_answer_text = matches[-1].group(1).strip()
+        if not answer_match:
+            logger.error(f"FATAL: Could not find '<answer>...</answer>' block for ID {q_id}.")
+            parsed_result['prediction'] = thinking_match.group(1).strip() if thinking_match else parsed_result['prediction']
+            parsed_result['choice'] = 'Error: Could not extract <answer> block.'
+            parsed_result['reasoning'] = 'Error: Could not extract <answer> block.'
+            return parsed_result
+
+        # Extract the clean text content
+        thinking_content = thinking_match.group(1).strip()
+        answer_content = answer_match.group(1).strip()
+
+        # Rule 1: The PREDICTION column is always the content from the <thinking> block.
+        parsed_result['prediction'] = thinking_content
         
-        # --- Robustness Step 3: Enhanced Fallback Logic ---
-        if not final_answer_text:
-            logger.warning(f"Could not find '\\boxed{{...}}' for ID {prediction['id']}. Using fallback logic.")
-            # If the box is missing, assume the last non-empty line of the cleaned response is the answer.
-            lines = [line.strip() for line in cleaned_response.strip().split('\n') if line.strip()]
-            if lines:
-                final_answer_text = lines[-1]
-
-        # If we still haven't found a plausible answer, log the failure and return the error state.
-        if not final_answer_text:
-            logger.error(f"FATAL: Could not parse any answer for ID {prediction['id']}. Full response was: {response}")
-            return prediction
-
-        # --- Step 4: Process the Extracted Answer ---
-        if question_type == "multiple_choice":
-            # For multiple choice, find the first valid choice letter (A-E).
-            # This is robust to answers like "\\boxed{The correct option is C}"
-            choice_match = re.search(r"\b([A-E])\b", final_answer_text.upper())
-            if choice_match:
-                prediction['choice'] = choice_match.group(1)
-            # Fallback for answers that are just the letter, e.g., "C"
-            elif len(final_answer_text) == 1 and 'A' <= final_answer_text.upper() <= 'E':
-                prediction['choice'] = final_answer_text.upper()
-            else:
-                logger.warning(f"Could not parse a valid choice (A-E) from '{final_answer_text}' for ID {prediction['id']}.")
-                prediction['choice'] = 'ERROR' # Mark as error if no valid choice found
-            
-            prediction['prediction'] = 'NOTAVALUE'
-
+        # Rule 2 & 3: Determine CHOICE and REASONING based on question_type.
+        if question_type == "multi_choice":
+            # CHOICE is the content from the <answer> block.
+            parsed_result['choice'] = answer_content
+            # REASONING is also the content from the <answer> block.
+            parsed_result['reasoning'] = answer_content
+        
         elif question_type == "open_ended":
-            prediction['prediction'] = final_answer_text
-            prediction['choice'] = 'NOTAVALUE'
+            # CHOICE is the special string 'NOTAVALUE'.
+            parsed_result['choice'] = 'NOTAVALUE'
+            # REASONING is the content from the <thinking> block.
+            parsed_result['reasoning'] = thinking_content
         
-        return prediction
+        elif question_type == "open_ended_multi_choice":
+            # CHOICE is the content from the <answer> block.
+            parsed_result['choice'] = answer_content
+            # REASONING is also the content from the <answer> block.
+            parsed_result['reasoning'] = thinking_content
+            
+        else:
+            # Handle unknown question types as an error
+            error_msg = f"Unknown question_type: '{question_type}'"
+            logger.warning(f"{error_msg} for ID {q_id}")
+            parsed_result['choice'] = error_msg
+            parsed_result['reasoning'] = error_msg
+
+        return parsed_result
     
     def _has_ground_truth(self, example: Dict) -> bool:
         """Check if example has ground truth for evaluation"""
@@ -780,11 +689,11 @@ class CompetitionKit:
         
         question_type = example.get('question_type', 'multiple_choice')
         
-        if question_type == "multiple_choice":
+        if question_type in ["multi_choice", "open_ended_multi_choice"]:
             return prediction['choice'] == ground_truth
-        else:
+        else: # open_ended
             # For open-ended, perform a case-insensitive comparison
-            return prediction['prediction'].lower().strip() == ground_truth.lower().strip()
+            return prediction['reasoning'].lower().strip() == ground_truth.lower().strip()
     
     def save_submission_with_metadata(self, results: EvaluationResult, output_path: str = None):
         """
@@ -876,46 +785,5 @@ def main():
         print(f"  {key}: {value}")
 
 
-
-def parse_boxed_answer(text: str) -> str | None:
-    """
-    Parses the given text to extract the content within the last \boxed{} command.
-    Handles both \boxed{} and \\boxed{} by looking for the literal string 'boxed'.
-    """
-    pattern = r'\\{1,2}boxed\{([^}]*)\}'
-    matches = re.findall(pattern, text)
-
-    if matches:
-        return matches[-1]
-    return None
-
-
-
-
-
-# Simple test to verify parse_boxed_answer integration
 if __name__ == "__main__":
-    test_text_1 = "Some reasoning. \\boxed{Final Answer Here}"
-    test_text_2 = "Another response with \\boxed{D}"
-    test_text_3 = "No boxed answer in this text."
-    test_text_4 = "This is a test with a single backslash: \\boxed{Single Backslash}"
-
-    print(f"\n--- Testing parse_boxed_answer integration ---")
-    print(f"Text 1: \'{test_text_1}\' -> Parsed: \'{parse_boxed_answer(test_text_1)}\'")
-    print(f"Text 2: \'{test_text_2}\' -> Parsed: \'{parse_boxed_answer(test_text_2)}\'")
-    print(f"Text 3: \'{test_text_3}\' -> Parsed: \'{parse_boxed_answer(test_text_3)}\'")
-    print(f"Text 4: \'{test_text_4}\' -> Parsed: \'{parse_boxed_answer(test_text_4)}\'")
-
-    # Expected outputs
-    expected_1 = "Final Answer Here"
-    expected_2 = "D"
-    expected_3 = None
-    expected_4 = "Single Backslash"
-
-    assert parse_boxed_answer(test_text_1) == expected_1, f"Test 1 Failed: Expected {expected_1}, Got {parse_boxed_answer(test_text_1)}"
-    assert parse_boxed_answer(test_text_2) == expected_2, f"Test 2 Failed: Expected {expected_2}, Got {parse_boxed_answer(test_text_2)}"
-    assert parse_boxed_answer(test_text_3) == expected_3, f"Test 3 Failed: Expected {expected_3}, Got {parse_boxed_answer(test_text_3)}"
-    assert parse_boxed_answer(test_text_4) == expected_4, f"Test 4 Failed: Expected {expected_4}, Got {parse_boxed_answer(test_text_4)}"
-
-    print("All integration tests passed successfully!")
-
+    main()
