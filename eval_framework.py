@@ -215,7 +215,7 @@ class vLLMModel(BaseModel):
             vllm_kwargs = {
                 'tensor_parallel_size': kwargs.get('tensor_parallel_size', 1),
                 'gpu_memory_utilization': kwargs.get('gpu_memory_utilization', 0.9),
-                'max_model_len': kwargs.get('max_model_len', 8192),
+                'max_model_len': kwargs.get('max_model_len', 16384 ),
                 'trust_remote_code': kwargs.get('trust_remote_code', True),
             }
             
@@ -229,9 +229,9 @@ class vLLMModel(BaseModel):
             self.model = LLM(model=self.model_name, **vllm_kwargs)
             # Updated sampling parameters
             self.sampling_params = SamplingParams(
-                max_tokens=4096,
-                temperature=0.6,
-                top_p=0.95,
+                max_tokens=16384 ,
+                temperature=0.7,
+                top_p=0.8,
                 top_k=20,
                 presence_penalty=2.0,
             )
@@ -240,7 +240,7 @@ class vLLMModel(BaseModel):
             logger.error(f"Failed to import vLLM dependencies: {e}")
             raise
     
-    def inference(self, prompt: str, max_tokens: int = 4096) -> Tuple[str, List[Dict]]:
+    def inference(self, prompt: str, max_tokens: int = 16384 ) -> Tuple[str, List[Dict]]:
         """vLLM inference with specified sampling parameters."""
         # Format prompt for vLLM
         formatted_prompt = f"<|system|>\n{UNIFIED_SYSTEM_PROMPT}\n<|user|>\n{prompt}\n<|assistant|>\n"
@@ -453,7 +453,7 @@ class CompetitionKit:
                 prediction.get('id', ''),
                 prediction.get('prediction', ''),
                 prediction.get('choice', ''),
-                prediction.get('reasoning', '') # Write the new string-based reasoning
+                prediction.get('reasoning', '') # Write the string-based reasoning
             ])
     
     def evaluate(self, dataset_name: str, output_file: str = None, max_examples: int = None) -> EvaluationResult:
@@ -602,8 +602,8 @@ class CompetitionKit:
     
     def _parse_response(self, example: Dict, response: str) -> Dict:
         """
-        Parses a model's response into a structured dictionary with 'prediction', 
-        'choice', and 'reasoning' fields based on the question_type.
+        Parses a model's response to build the structured dictionary for CSV output,
+        including the JSON-formatted reasoning string.
         """
         question_type = example.get('question_type')
         q_id = example.get('id', 'N/A')
@@ -613,7 +613,7 @@ class CompetitionKit:
             'id': q_id,
             'prediction': 'Error: Could not extract <thinking> block.',
             'choice': 'Error: Could not determine choice.',
-            'reasoning': 'Error: Could not determine reasoning.',
+            'reasoning': 'Error: Could not construct reasoning.',
         }
 
         # Regex to find content within <thinking>...</thinking>
@@ -633,47 +633,51 @@ class CompetitionKit:
         # Handle cases where tags are missing
         if not thinking_match:
             logger.error(f"FATAL: Could not find '<thinking>...</thinking>' block for ID {q_id}.")
-            return parsed_result # Return with thinking error
+            return parsed_result
         
         if not answer_match:
             logger.error(f"FATAL: Could not find '<answer>...</answer>' block for ID {q_id}.")
-            parsed_result['prediction'] = thinking_match.group(1).strip() if thinking_match else parsed_result['prediction']
+            parsed_result['prediction'] = thinking_match.group(1).strip()
             parsed_result['choice'] = 'Error: Could not extract <answer> block.'
             parsed_result['reasoning'] = 'Error: Could not extract <answer> block.'
             return parsed_result
 
-        # Extract the clean text content
+        # Extract the clean text content from the tags
         thinking_content = thinking_match.group(1).strip()
         answer_content = answer_match.group(1).strip()
+
+        # --- Populate the dictionary based on your specified rules ---
 
         # Rule 1: The PREDICTION column is always the content from the <thinking> block.
         parsed_result['prediction'] = thinking_content
         
-        # Rule 2 & 3: Determine CHOICE and REASONING based on question_type.
-        if question_type == "multi_choice":
-            # CHOICE is the content from the <answer> block.
+        # Define a variable to hold the assistant's response content for the reasoning block
+        assistant_response_for_reasoning = ""
+
+        # Rule 2: Determine CHOICE and the content for the assistant's reasoning response
+        if question_type in ["multi_choice", "open_ended_multi_choice"]:
             parsed_result['choice'] = answer_content
-            # REASONING is also the content from the <answer> block.
-            parsed_result['reasoning'] = answer_content
+            assistant_response_for_reasoning = answer_content
         
         elif question_type == "open_ended":
-            # CHOICE is the special string 'NOTAVALUE'.
             parsed_result['choice'] = 'NOTAVALUE'
-            # REASONING is the content from the <thinking> block.
-            parsed_result['reasoning'] = thinking_content
-        
-        elif question_type == "open_ended_multi_choice":
-            # CHOICE is the content from the <answer> block.
-            parsed_result['choice'] = answer_content
-            # REASONING is also the content from the <answer> block.
-            parsed_result['reasoning'] = thinking_content
+            assistant_response_for_reasoning = thinking_content
             
         else:
-            # Handle unknown question types as an error
             error_msg = f"Unknown question_type: '{question_type}'"
             logger.warning(f"{error_msg} for ID {q_id}")
             parsed_result['choice'] = error_msg
-            parsed_result['reasoning'] = error_msg
+            assistant_response_for_reasoning = error_msg
+
+        # Rule 3: Construct the REASONING column as a JSON string
+        reasoning_list = [
+            {"role": "system", "content": UNIFIED_SYSTEM_PROMPT},
+            {"role": "user", "content": self._create_prompt(example)}, # Use the full prompt for user content
+            {"role": "assistant", "content": assistant_response_for_reasoning}
+        ]
+        
+        # Convert the list of dictionaries to a JSON-formatted string
+        parsed_result['reasoning'] = json.dumps(reasoning_list, indent=2)
 
         return parsed_result
     
@@ -683,17 +687,18 @@ class CompetitionKit:
     
     def _is_correct(self, example: Dict, prediction: Dict) -> bool:
         """Check if prediction is correct"""
-        ground_truth = example.get('correct_answer') or example.get('answer')
+        ground_truth = str(example.get('correct_answer') or example.get('answer'))
         if not ground_truth:
             return False
         
         question_type = example.get('question_type', 'multiple_choice')
         
         if question_type in ["multi_choice", "open_ended_multi_choice"]:
-            return prediction['choice'] == ground_truth
+            return prediction['choice'].strip() == ground_truth.strip()
         else: # open_ended
-            # For open-ended, perform a case-insensitive comparison
-            return prediction['reasoning'].lower().strip() == ground_truth.lower().strip()
+            # For open-ended questions, the correct "answer" is the detailed reasoning,
+            # which is stored in the 'prediction' field.
+            return prediction['prediction'].lower().strip() == ground_truth.lower().strip()
     
     def save_submission_with_metadata(self, results: EvaluationResult, output_path: str = None):
         """
