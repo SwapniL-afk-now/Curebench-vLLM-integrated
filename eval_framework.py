@@ -237,7 +237,7 @@ class vLLMModel(BaseModel):
             vllm_kwargs = {
                 'tensor_parallel_size': tensor_parallel_size,
                 'gpu_memory_utilization': kwargs.get('gpu_memory_utilization', 0.9),
-                'max_model_len': kwargs.get('max_model_len', 16384),
+                'max_model_len': kwargs.get('max_model_len', 16128),
                 'trust_remote_code': kwargs.get('trust_remote_code', True),
                 'quantization': quantization_type,
             }
@@ -254,7 +254,7 @@ class vLLMModel(BaseModel):
             
             # Updated sampling parameters
             self.sampling_params = SamplingParams(
-                max_tokens=16384,
+                max_tokens=16128,
                 temperature=0.7,
                 top_p=0.8,
                 top_k=20,
@@ -268,7 +268,7 @@ class vLLMModel(BaseModel):
             logger.error(f"Failed to import vLLM or PyTorch dependencies: {e}")
             raise
     
-    def inference(self, prompt: str, max_tokens: int = 16384 ) -> Tuple[str, List[Dict]]:
+    def inference(self, prompt: str, max_tokens: int = 16128 ) -> Tuple[str, List[Dict]]:
         """vLLM inference with specified sampling parameters."""
         # Format prompt for vLLM
         formatted_prompt = f"<|system|>\n{UNIFIED_SYSTEM_PROMPT}\n<|user|>\n{prompt}\n<|assistant|>\n"
