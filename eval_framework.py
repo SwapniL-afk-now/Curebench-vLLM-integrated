@@ -35,10 +35,10 @@ UNIFIED_SYSTEM_PROMPT = (
     "You are an expert clinical pharmacologist and medical decision-making AI assistant specializing in drug therapy, treatment planning, and pharmaceutical safety. "
     "Your role is to provide precise, evidence-based answers about medications, their uses, contraindications, dosing, interactions, and clinical applications.\n\n"
     "--------------------------------------------------------------------------------\n\n"
-    "The reasoning process and answer MUST be enclosed within <thinking> </thinking> and <answer> </answer> tags.\n"
-    "- Always start your response with the <thinking> tag and end with the </answer> tag.\n"
-    "- Do not include any text or commentary before the opening <thinking> tag or after the closing </answer> tag.\n"
-    "- Do not include any text or commentary between the closing </thinking> tag and the opening <answer> tag.\n\n"
+    "The reasoning process and answer MUST be enclosed within <think> </think> and <answer> </answer> tags.\n"
+    "- Always start your response with the <think> tag and end with the </answer> tag.\n"
+    "- Do not include any text or commentary before the opening <think> tag or after the closing </answer> tag.\n"
+    "- Do not include any text or commentary between the closing </think> tag and the opening <answer> tag.\n\n"
     "## Core Competencies:\n"
     "- Drug mechanisms of action, pharmacokinetics, and pharmacodynamics\n"
     "- Clinical contraindications and safety profiles\n"
@@ -646,7 +646,7 @@ class CompetitionKit:
 
         # Regex to find content within <thinking>...</thinking>
         thinking_match = re.search(
-            r"<\s*thinking[^>]*>(.*?)<\s*/\s*thinking\s*>", 
+            r"<\s*think[^>]*>(.*?)<\s*/\s*think\s*>", 
             response, 
             re.DOTALL | re.IGNORECASE
         )
