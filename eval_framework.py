@@ -204,40 +204,68 @@ class LocalModel(BaseModel):
 
 
 class vLLMModel(BaseModel):
-    """vLLM model wrapper for efficient inference"""
+    """
+    vLLM model wrapper for efficient inference.
+    Automatically detects GPU count for tensor parallelism and quantization type from model name.
+    """
     
     def load(self, **kwargs):
         """Load vLLM model"""
         try:
             from vllm import LLM, SamplingParams
+            import torch
+
+            # 1. Automatically detect the number of available GPUs
+            if torch.cuda.is_available():
+                num_gpus = torch.cuda.device_count()
+                logger.info(f"Detected {num_gpus} available GPUs.")
+            else:
+                raise RuntimeError("No NVIDIA GPUs detected. vLLM requires at least one GPU.")
+
+            # Use the detected GPU count as the default, but allow user to override
+            tensor_parallel_size = kwargs.get('tensor_parallel_size', num_gpus)
             
-            # Default vLLM parameters
+            # 2. Auto-detect quantization from model name, but allow override
+            quantization_type = kwargs.get('quantization')
+            if quantization_type is None:
+                if "awq" in self.model_name.lower():
+                    quantization_type = "awq"
+                elif "gptq" in self.model_name.lower():
+                    quantization_type = "gptq"
+            
+            # 3. Set up vLLM keyword arguments
             vllm_kwargs = {
-                'tensor_parallel_size': kwargs.get('tensor_parallel_size', 1),
+                'tensor_parallel_size': tensor_parallel_size,
                 'gpu_memory_utilization': kwargs.get('gpu_memory_utilization', 0.9),
-                'max_model_len': kwargs.get('max_model_len', 16384 ),
+                'max_model_len': kwargs.get('max_model_len', 16384),
                 'trust_remote_code': kwargs.get('trust_remote_code', True),
+                'quantization': quantization_type,
             }
             
-            # Remove vLLM-specific kwargs from general kwargs
-            for key in ['tensor_parallel_size', 'gpu_memory_utilization', 'max_model_len', 'trust_remote_code']:
+            # Remove vLLM-specific kwargs from general kwargs to avoid passing them twice
+            for key in ['tensor_parallel_size', 'gpu_memory_utilization', 'max_model_len', 'trust_remote_code', 'quantization']:
                 kwargs.pop(key, None)
             
-            # Merge remaining kwargs
+            # Merge any remaining user-provided kwargs
             vllm_kwargs.update(kwargs)
             
+            # 4. Initialize the vLLM engine
             self.model = LLM(model=self.model_name, **vllm_kwargs)
+            
             # Updated sampling parameters
             self.sampling_params = SamplingParams(
-                max_tokens=16384 ,
+                max_tokens=16384,
                 temperature=0.7,
                 top_p=0.8,
                 top_k=20,
                 presence_penalty=2.0,
             )
-            logger.info(f"Loaded vLLM model: {self.model_name}")
+            logger.info(
+                f"Loaded vLLM model: {self.model_name} "
+                f"(Quantization: {quantization_type or 'None'}, TP Size: {tensor_parallel_size})"
+            )
         except ImportError as e:
-            logger.error(f"Failed to import vLLM dependencies: {e}")
+            logger.error(f"Failed to import vLLM or PyTorch dependencies: {e}")
             raise
     
     def inference(self, prompt: str, max_tokens: int = 16384 ) -> Tuple[str, List[Dict]]:
